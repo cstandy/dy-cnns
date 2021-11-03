@@ -1,0 +1,7 @@
+# Exclude latex intermediate files
+*.blg
+*.bbl
+*.aux
+*.log
+*.run.xml
+*-blx.bib

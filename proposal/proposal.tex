@@ -1,0 +1,80 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ECE 661 Proposal
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages and settings
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \documentclass{article}
+\documentclass[10pt, journal, onecolumn]{IEEEtran}
+\usepackage[utf8]{inputenc}
+
+% Setup page size
+\usepackage[letterpaper,left=0.5in,right=0.5in,top=0.3in,bottom=0.5in]{geometry}
+
+% Configure font
+\usepackage{mathptmx}
+\usepackage[T1]{fontenc}
+\fontfamily{ptm}
+
+% Import reference
+\usepackage[backend=bibtex]{biblatex}    % Import biblatex package
+\addbibresource{ref.bib} % Import the bibliography file
+
+% Setup title
+\title{ECE661 Proposal \\
+       Project 2: Input-Dependent Dynamic CNN Model}
+\author{Wei-Kai Liu,      \and
+        Chung-Hsuan Tung, \and
+        Yi-Chen Chang     \and
+        \\Huanrui Yang (Lead TA)}
+\date{November 2021}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\maketitle
+
+\vspace{-20pt}
+\begin{enumerate}
+\large
+    \item What are you trying to do?\\
+    Implementing input-dependent dynamic CNN models by applying two techniques: dynamic convolution and dynamic channel gating, which provide dynamic kernel combination and dynamic filter selection, respectively.
+    \item How is it done today?\\
+    The inputs of CNN models may have different features, which can vary between classes. Thus, dynamic CNN models uses the input-dependent features to increase the model computational efficiency. \cite{chen2020dynamic} proposed dynamic convolution, which combines several small-size kernels dynamically depending on inputs. This method significantly increases the model accuracy with only a small raise in computational costs. \cite{Bejnordi2020Batch-shaping} introduced a new residual block architecture to  gate convolutional channels. Thus, the filters are selected based on the input features during model inference time. This method  achieves a higher model accuracy while the inference computational costs reduces or remains the same.
+    
+    \item Your approach and why do you think it will be successful?\\
+    We will use the dynamic convolution method as a substitute for the original convolution neural network (By Wei-Kai). 
+    By introducing the attention concept, k parameters $\pi_1 \sim \pi_k$ are utilized to aggregate k convolution kernels.
+    In this case, we can get a more computationally efficient model but has more representative power as we aggregate these small kernels in a non-linear way.
+    % In this project, we will first replace all the convolution layers with the dynamic one, and then observe the accuracy variations when applying different kernel sizes, e.g., $k = 2, 3, 4, $or $5$.
+    Also, by applying the channel gated networks, the model can choose to turn on/off each filter to reduce FLOPs without shrinking the model (By Chung-Hsuan and Yi-Chen).
+    With the additional flexibility provided by these two methods, we believe that we can generate better results than the original convolution network.
+    Lastly, we will try to perform PGD adversarial or other kinds of attacks on both~\cite{chen2020dynamic} and~\cite{Bejnordi2020Batch-shaping} and observe the differences and performance compared to the original model (By all). 
+    \item What are the risks?
+        \\
+        Training the attention weights for each kernel in \cite{chen2020dynamic} may be difficult. If the number of convolution kernels is larger, the model may take more time to converge. The complexity implicitly indicates a longer training time.
+        The batch-shaping loss in \cite{Bejnordi2020Batch-shaping} may be difficult to implement and also need more training time.
+    \item How long will it take?
+    \begin{itemize}
+        \item Week 11/8:  Read papers and start to implement.
+        \item Week 11/15: Finish basic implementations.  For \cite{chen2020dynamic}, trained with 2 to 5 kernels. 
+        \item Week 11/22: For \cite{chen2020dynamic}, visualize the attention map. For \cite{Bejnordi2020Batch-shaping}, visualize the gate distribution. Read materials about the optional requirement.
+        \item Week 11/29: Implement the optional requirement.
+        \item Week 12/6: Collect the results and write reports.
+    \end{itemize}
+    \item What are the final "exams" to check for success?
+        \begin{itemize}
+            \item \cite{chen2020dynamic} Plot accuracy (both training and validation) versus kernel numbers $k=$ 2, 3, 4, 5.
+            \item \cite{chen2020dynamic} Visualize the attention map distribution for selected testing images and show the similarity based on classes with T-SNE.
+            \item \cite{Bejnordi2020Batch-shaping} Report the accuracy and calculate the averaged FLOPs. The result should show that the model uses fewer FLOPs than the original ResNet-20 model.
+            \item \cite{Bejnordi2020Batch-shaping} Visualize the channel usage and show the usage pattern is similar for similar classes.
+        \end{itemize}
+          
+\end{enumerate}
+
+\printbibliography
+
+\end{document}
