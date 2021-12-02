@@ -5,3 +5,17 @@
 *.log
 *.run.xml
 *-blx.bib
+
+# Exclude prediction results
+*.csv
+
+# Exclude training files
+**/data/**
+*.pth
+*.h5
+
+# Exclude python executives
+*.pyc
+
+# Exclude .ipynb backups
+**/.ipynb_checkpoints/

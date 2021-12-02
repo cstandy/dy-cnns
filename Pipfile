@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+torch = "*"
+torchvision = "*"
+tdqm = "*"
+ipykernel = "*"
+notebook = "*"
+ipywidgets = "*"
+jupyter = "*"
+widgetsnbextension = "*"
+scipy = "*"
+matplotlib = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.6"
