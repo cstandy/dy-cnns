@@ -9,11 +9,24 @@ Students:
 - Wei-Kai Liu
 - Chung-Hsuan Tung
 - Yi-Chen Chang
-
+## Requirements
+- Python (Tested with v3.7.10)
+- PyTorch (Tested with v1.9.1)
 ## Dynamic Convolution
 
 Apply dynamic convolution so the model can reach higher accuracy without much computational overhead.
 Dynamic convolution is achieved by applying attention to multiple kernels in a channel. 
+
+The command for dynamic convolution:
+```
+python3 dynamic.py <number of kernel>
+```
+The command for plotting attention map:
+```
+python3 plot_attention.py <model_path> <number of kernel>
+```
+  please make sure the number of kernel you key in is compatible with the model you load
+
 
 ## Channel Gating
 
