@@ -73,33 +73,33 @@ if __name__ == '__main__':
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
     test_set = CIFAR10(
-        root=DATA_ROOT, 
-        mode='test', 
+        root=DATA_ROOT,
+        mode='test',
         download=True,
         transform=transform_val
     )
     val_set = CIFAR10(
-        root=DATA_ROOT, 
-        mode='val', 
+        root=DATA_ROOT,
+        mode='val',
         download=True,
         transform=transform_val     # your code
     )
     val_loader = DataLoader(
-        val_set, 
+        val_set,
         batch_size=VAL_BATCH_SIZE,  # your code
         shuffle= False,     # your code
         num_workers=4
     )
     test_loader = DataLoader(
-        test_set, 
-        batch_size=VAL_BATCH_SIZE, 
-        shuffle=False, 
+        test_set,
+        batch_size=VAL_BATCH_SIZE,
+        shuffle=False,
         num_workers=4)
     for batch_idx, (inputs,target) in enumerate(test_loader):
             if(batch_idx >0):
                 break
     criterion = nn.CrossEntropyLoss()
-    K = 5
+    K = int(sys.argv[1])
     net = ResNets(K)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     net.load_state_dict(torch.load(model_path)['state_dict'])
