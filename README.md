@@ -15,6 +15,13 @@ Students:
 Apply dynamic convolution so the model can reach higher accuracy without much computational overhead.
 Dynamic convolution is achieved by applying attention to multiple kernels in a channel. 
 
+The command for dynamic convolution:
+python3 dynamic.py <number of kernel>
+The command for plotting attention map:
+python3 plot_attention.py <model_path> <number of kernel>
+  please make sure the number of kernel you key in is compatible with the model you load
+
+
 ## Channel Gating
 
 Apply channel gating so a large model can reach higher accuracy with low FLOPs as a smaller model.
