@@ -11,8 +11,6 @@
 
 # Exclude training files
 **/data/**
-*.pth
-*.h5
 
 # Exclude python executives
 *.pyc
