@@ -264,7 +264,7 @@ Here, you need to:
 # specify the device for computation
 #############################################
 # your code here
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
 # Model Definition  
 net = ResNets()
 net = net.to(device)
@@ -460,7 +460,7 @@ net.block3[2].gate.register_forward_hook(get_activation('block3[2].gate'))
 # %%
 # some hyperparameters
 # total number of training epochs
-EPOCHS = 160
+EPOCHS = 500
 # learning rate decay policy
 
 # the folder where the trained model is saved
@@ -568,7 +568,7 @@ for i in range(0, EPOCHS):
         state = {'state_dict': net.state_dict(),
                  'epoch': i,
                  'lr': current_learning_rate}
-        torch.save(state, os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py.pth'))
+        torch.save(state, os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_500.pth'))
         
     print('')
 
@@ -602,7 +602,7 @@ CHECKPOINT_PATH = "./saved_model"
 
 net = ResNets()
 net = net.to(device)
-checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py.pth'))
+checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_500.pth'))
 net.load_state_dict(checkpoint['state_dict'])
 
 # %%

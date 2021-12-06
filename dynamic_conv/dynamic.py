@@ -148,7 +148,7 @@ scheduler = WarmUP(optimizer,INITIAL_LR,30)
 #############################################
 
 
-CHECKPOINT_PATH = "./save_model"
+CHECKPOINT_PATH = "./saved_model"
 
 # start the training/validation process
 # the process should take about 5 minutes on a GTX 1070-Ti
