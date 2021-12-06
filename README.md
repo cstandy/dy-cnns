@@ -26,7 +26,11 @@ The command for plotting attention map:
 python3 plot_attention.py <model_path> <number of kernel>
 ```
   please make sure the number of kernel you key in is compatible with the model you load
-
+The command for applying PGD attack:
+```
+python3 pgd.py <select> 
+```
+select = 1 (whitebox attack), 2 (adversarial training), 3(transfer blackbox attack)
 
 ## Channel Gating
 
