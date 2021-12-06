@@ -1,13 +1,13 @@
 # %%
 """
-# Training ResNets on CIFAR-10
-In this project, you will use the ResNets model to perform image classification on CIFAR-10. CIFAR-10 orginally contains 60K images from 10 categories. We split it into 45K/5K/10K images to serve as train/valiation/test set. We only release the ground-truth labels of training/validation dataset to you.
+# Apply Channel Gating & Batch Shaping on ResNet-20 and CIFAR-10
+
+In this project, we use the ResNets model to perform image classification on CIFAR-10. CIFAR-10 orginally contains 60K images from 10 categories. We split it into 45K/5K/10K images to serve as train/valiation/test set. We only have the ground-truth labels of training/validation dataset.
 """
 
 # %%
 """
-## Step 0: Set up the ResNets model
-As you have practiced to implement simple neural networks in Homework 1, we just prepare the implementation for you.
+## Step 1: Set up the ResNets model
 """
 
 # %%
@@ -24,13 +24,16 @@ import torch.nn.functional as F
 
 import torch.distributions.gumbel as gm
 
-torch.random.manual_seed(6)
+# torch.random.manual_seed(6)
 
 # %%
-#parameter for gumbel distribution
-GM_SCALE = 0.1
+"""
+### 1.1 Implement the gating module
+Here is the gating module, a convolution kernel selector. We will apply this in each of the residual blocks for ResNet-20.
+"""
 
-# # define the Gate module
+# %%
+# Define the Gate module
 class Gate(nn.Module):
     def __init__(self, in_channel, out_channel) -> None:
         super().__init__()
@@ -39,9 +42,6 @@ class Gate(nn.Module):
         self.fc2 = nn.Linear(in_features=16, out_features=out_channel)
         self.bn = nn.BatchNorm1d(num_features=16)
 
-        # Setup Gumbel noise params
-        # self.gm_scale = torch.tensor([GM_SCALE])
-        # self.gm_scale = self.gm_scale.to(device)
     def forward(self, x):
         x = self.avg_pool(x)
         x = torch.squeeze(x)
@@ -55,8 +55,14 @@ class Gate(nn.Module):
         pi = torch.exp(x) # hat{pi} = ln(pi), hat{pi} is output of fc2
         x = F.gumbel_softmax(pi, tau=2/3, hard=True) 
 
-        # x = x + gm.Gumbel(x, self.gm_scale).sample()
         return x
+
+# %%
+"""
+### 1.2 Setup ResNet model
+
+The ResNet-20 model is built hierarchically, and the gating modules are applied to residual blocks.
+"""
 
 # %%
 # define the ResNets mode;
@@ -76,7 +82,7 @@ class BasicBlock(nn.Module):
         # Channel gating module
         self.gate = Gate(input1, output)
     def forward(self,x):
-        # Channel gating
+        # Process selection information from the inputs
         gate_out = self.gate(x)
 
         out = self.conv1(x)
@@ -84,9 +90,8 @@ class BasicBlock(nn.Module):
         
         # Apply channel gating
         gate_out = torch.squeeze(gate_out)
-        # print(out.shape)
-        # print(gate_out.shape)
-        # quit(0)
+
+        # # For-loop implementation is straight-forward but too slow
         # for i in range(gate_out.shape[0]): # Run over a batch
         #     for j in range(gate_out.shape[1]): # Run through channels
         #         if gate_out[i][j].item() == 0:
@@ -146,24 +151,12 @@ class ResNets(nn.Module):
 
 # %%
 """
-## Step 1: Set up preprocessing functions
-Preprocessing is very important as discussed in the lecture.
-You will need to write preprocessing functions with the help of *torchvision.transforms* in this step.
-You can find helpful tutorial/API at [here](https://pytorch.org/vision/stable/transforms.html).
+## Step 2: Setup the training environment
 """
 
 # %%
 """
-### Question (b)
-For the question, you need to:
-1. Complete the preprocessing code below.
-2. **In the PDF report**, briefly describe what preprocessing operations you used and what are the purposes of them.
-
-Hint: 
-1. Only two operations are necessary to complete the basic preprocessing here.
-2. The raw input read from the dataset will be PIL images.
-3. Data augmentation operations are not mendatory, but feel free to incorporate them if you want.
-4. Reference value for mean/std of CIFAR-10 images (assuming the pixel values are within [0,1]): mean (RGB-format): (0.4914, 0.4822, 0.4465), std (RGB-format): (0.2023, 0.1994, 0.2010)
+### 2.1 Set up preprocessing functions
 """
 
 # %%
@@ -189,13 +182,7 @@ transform_val = transforms.Compose([
 
 # %%
 """
-## Step 2: Set up dataset and dataloader
-
-### Question (c)
-Set up the train/val datasets and dataloders that are to be used during the training. Check out the [official API](https://pytorch.org/docs/stable/data.html) for more information about **torch.utils.data.DataLoader**.
-
-Here, you need to:
-1. Complete the code below.
+### 2.2 Set up dataset and dataloader
 """
 
 # %%
@@ -251,20 +238,15 @@ test_loader = DataLoader(
 
 # %%
 """
-## Step 3: Instantiate your ResNets model and deploy it to GPU devices.
-### Question (d)
-You may want to deploy your model to GPU device for efficient training. Please assign your model to GPU if possible. If you are training on a machine without GPUs, please deploy your model to CPUs.
+### 2.3 Instantiate your ResNets model and deploy it to GPU devices.
 
-Here, you need to:
-1. Complete the code below.
-2. **In the PDF report**, briefly describe how you verify that your model is indeed deployed on GPU. (Hint: check $\texttt{nvidia-smi}$.)
 """
 
 # %%
 # specify the device for computation
 #############################################
 # your code here
-device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:2' if torch.cuda.is_available() else 'cpu'
 # Model Definition  
 net = ResNets()
 net = net.to(device)
@@ -274,16 +256,7 @@ print('Using device:', device)
 
 # %%
 """
-## Step 4: Set up the loss function and optimizer
-Loss function/objective function is used to provide "feedback" for the neural networks. Typically, we use multi-class cross-entropy as the loss function for classification models. As for the optimizer, we will use SGD with momentum. 
-"""
-
-# %%
-"""
-### Question (e)
-Here, you need to:
-1. Set up the cross-entropy loss as the criterion. (Hint: there are implemented functions in **torch.nn**)
-2. Specify a SGD optimizer with momentum. (Hint: there are implemented functions in **torch.optim**)
+### 2.4 Set up the loss function and optimizer
 """
 
 # %%
@@ -292,7 +265,7 @@ import numpy as np
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.lr_scheduler import MultiStepLR
-# hyperparameters, do NOT change right now
+# hyperparameters
 # initial learning rat
 INITIAL_LR = 0.1
 
@@ -300,71 +273,33 @@ INITIAL_LR = 0.1
 MOMENTUM = 0.9
 
 # L2 regularization strength
-REG = 1e-4
-# REG = 5e-4
+# REG = 1e-4
+REG = 5e-4
 
-#############################################
-# your code here
 # create loss function
 criterion = nn.CrossEntropyLoss()
 
 # Add optimizer
 optimizer = optim.SGD(net.parameters(), lr=INITIAL_LR, momentum=MOMENTUM,weight_decay=REG,nesterov=True)
-scheduler = ReduceLROnPlateau(optimizer, factor=0.1,threshold = 1e-4,patience=8, verbose=True)
+# scheduler = ReduceLROnPlateau(optimizer, factor=0.1,threshold = 1e-4,patience=8, verbose=True)
 # Scheduler based on the paper "Batch shaping" for cifar-10 with ResNet-20
-# scheduler = MultiStepLR(optimizer, milestones=[300, 375, 450], gamma=0.1)
-#############################################
+scheduler = MultiStepLR(optimizer, milestones=[300, 375, 450], gamma=0.1)
 
 # %%
 """
-## Step 5: Start the training process.
+## Step 3: Setup batch shaping (BS) loss function
 
-### Question (f)/(g)
-Congratulations! You have completed all of the previous steps and it is time to train our neural network.
-
-Here you need to:
-1. Complete the training codes.
-2. Actually perform the training.
-
-Hint: Training a neural network usually repeats the following 4 steps: 
-
-**i) Get a batch of data from the dataloader and copy it to your device (GPU).**
-
-**ii) Do a forward pass to get the outputs from the neural network and compute the loss. Be careful about your inputs to the loss function. Are the inputs required to be the logits or softmax probabilities?)**
-
-**iii) Do a backward pass (back-propagation) to compute gradients of all weights with respect to the loss.**
-
-**iiii) Update the model weights with the optimizer.**
-
-You will also need to compute the accuracy of training/validation samples to track your model's performance over each epoch (the accuracy should be increasing as you train for more and more epochs).
+The BS loss help train the gating module to more conditionally select the filters.
+BS loss is computed by matching the gate selection to the beta distribution.
 """
 
 # %%
 from scipy.stats import beta as sci_beta
 
-# %%
-# Batch shaping loss
-# @brief A function compute batch shaping loss based on beta CDF
-# @param x: gating output
-# @param gamma: loss factor
-# @param alpha, beta: Beta distribution parameters
-# @param batch_size: batch size
-# @reutrn loss: batch shaping loss
-
 # Loss stregth from the paper, alpha, beta from wiki
 GAMMA=0.75
 ALPHA=0.5
 BETA=ALPHA
-
-# def bs_loss(x, gamma, alpha, beta, batch_size):
-#     loss = 0
-#     x_dup = x.clone().detach().cpu().numpy()
-#     for i in range(x.shape[0]):
-#         x_sort = np.sort(x_dup[i].flatten()) # TODO: Check for dimension correctness
-#         p_cdf = sci_beta.cdf(x_sort, alpha, beta)
-#         e_cdf = np.linspace(1, 1+batch_size, 1) / (batch_size+1)
-#         loss = loss + np.sum(np.power(e_cdf - p_cdf, 2)).item()
-#     return loss * gamma
 
 # %%
 # Customized loss function: Batch shaping loss
@@ -372,6 +307,15 @@ BETA=ALPHA
 class Batch_Shaping_Loss(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, gamma, alpha, beta, batch_size):
+        '''
+        Batch shaping loss
+        @brief A function compute batch shaping loss based on beta CDF
+        @param x: gating output
+        @param gamma: loss factor
+        @param alpha, beta: Beta distribution parameters
+        @param batch_size: batch size
+        @reutrn loss: batch shaping loss
+        '''
         loss = 0
         loss = torch.autograd.Variable(torch.tensor(loss))
         x_dup = x.clone().detach().cpu().numpy()
@@ -435,7 +379,13 @@ bs_loss = Batch_Shaping_Loss.apply
 
 # %%
 """
-## Get the output of each gates
+## Step 4: Start the training process.
+
+"""
+
+# %%
+"""
+### 4.1 Register hook functions to get the output of each gates
 """
 
 # %%
@@ -456,6 +406,11 @@ net.block2[2].gate.register_forward_hook(get_activation('block2[2].gate'))
 net.block3[0].gate.register_forward_hook(get_activation('block3[0].gate'))
 net.block3[1].gate.register_forward_hook(get_activation('block3[1].gate'))
 net.block3[2].gate.register_forward_hook(get_activation('block3[2].gate'))
+
+# %%
+"""
+### 4.2 Start training
+"""
 
 # %%
 # some hyperparameters
@@ -568,32 +523,37 @@ for i in range(0, EPOCHS):
         state = {'state_dict': net.state_dict(),
                  'epoch': i,
                  'lr': current_learning_rate}
-        torch.save(state, os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_500.pth'))
+        torch.save(state, os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_org.pth'))
         
     print('')
 
 print("="*50)
 print(f"==> Optimization finished! Best validation accuracy: {best_val_acc:.4f}")
 
-net.eval()
-results = []
-with torch.no_grad():
-    for inputs in (test_loader):
-        inputs = inputs.to(device)
-        # Generate output from the DNN.
-        outputs = net(inputs)        
-        # Calculate predicted labels
-        _, predicted = torch.max(out, 1)
-        results.append(predicted.detach().cpu().numpy())
-results = np.array(results).flatten()
-with open('predictions_%.4f.csv'%(best_val_acc), 'w') as fp:
-    fp.write("Id,Label\n")
-    for i in range(len(results)):
-        fp.write("%d,%d\n" %(i, results[i]))
+# net.eval()
+# results = []
+# with torch.no_grad():
+#     for inputs in (test_loader):
+#         inputs = inputs.to(device)
+#         # Generate output from the DNN.
+#         outputs = net(inputs)        
+#         # Calculate predicted labels
+#         _, predicted = torch.max(out, 1)
+#         results.append(predicted.detach().cpu().numpy())
+# results = np.array(results).flatten()
+# with open('predictions_%.4f.csv'%(best_val_acc), 'w') as fp:
+#     fp.write("Id,Label\n")
+#     for i in range(len(results)):
+#         fp.write("%d,%d\n" %(i, results[i]))
 
 # %%
 """
-# Load Model
+## Step 5: Prepare for gate usage analysis
+"""
+
+# %%
+"""
+### 5.1 Load Model
 """
 
 # %%
@@ -602,12 +562,44 @@ CHECKPOINT_PATH = "./saved_model"
 
 net = ResNets()
 net = net.to(device)
-checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_500.pth'))
+checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_org.pth'))
+# checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm.pth'))
 net.load_state_dict(checkpoint['state_dict'])
 
 # %%
 # print(net)
 # print(net.block1[0].gate.fc2)
+
+# %%
+"""
+### 5.2 Registe hook functions to get outputs of gates
+"""
+
+# %%
+# Hook function to get the output activation from a certain layer
+activation = {}
+def get_activation(name):
+    def hook(model, input, output):
+        activation[name] = output.detach()
+    return hook
+
+# Register a hook function to get activations from the last layer
+net.block1[0].gate.register_forward_hook(get_activation('block1[0].gate'))
+net.block1[1].gate.register_forward_hook(get_activation('block1[1].gate'))
+net.block1[2].gate.register_forward_hook(get_activation('block1[2].gate'))
+net.block2[0].gate.register_forward_hook(get_activation('block2[0].gate'))
+net.block2[1].gate.register_forward_hook(get_activation('block2[1].gate'))
+net.block2[2].gate.register_forward_hook(get_activation('block2[2].gate'))
+net.block3[0].gate.register_forward_hook(get_activation('block3[0].gate'))
+net.block3[1].gate.register_forward_hook(get_activation('block3[1].gate'))
+net.block3[2].gate.register_forward_hook(get_activation('block3[2].gate'))
+
+# %%
+"""
+### 5.3 Run validation
+
+Run a validation set to get the filter selection across different images.
+"""
 
 # %%
 # Validate on the validation dataset
@@ -625,6 +617,7 @@ val_loss = 0 # again, track the validation loss if you want
 with torch.no_grad():
 
     gates = []
+    classes = []
     for batch_idx, (inputs, targets) in enumerate(val_loader):
         ####################################
         # your code here
@@ -650,6 +643,8 @@ with torch.no_grad():
                     gates[i][j] = torch.cat([gates[i][j], gate])
                     # gates[i][j].append(gate)
 
+        # Record the output classes
+        classes.append(targets)
 
         loss = criterion(outputs, targets)
         
@@ -666,6 +661,16 @@ print("Validation loss: %.4f, Validation accuracy: %.4f" % (avg_loss, avg_acc))
     
 
 # %%
+"""
+## Step 6: Read overall gate usage
+"""
+
+# %%
+"""
+### 6.1 Count gate open frequency over the entire validation set
+"""
+
+# %%
 HIGH_THRS=0.99 # On threshold
 LOW_THRS=0.01 # Off threshold
 
@@ -674,7 +679,7 @@ def count_gate_status(gate: torch.Tensor):
     # gate.shape[1]: gate numbers (channel numbers)
     batch_size = gate.shape[0]
     gate_num = gate.shape[1]
-    print('batch_size = {}, gate_um = {}'.format(batch_size, gate_num))
+    print('batch_size = {}, gate_num = {}'.format(batch_size, gate_num))
 
     count = torch.zeros(gate_num).to(device)
     for i in range(batch_size):
@@ -703,15 +708,21 @@ rest_list = []
 for i in range(3):
     for j in range(3):
         print('block{}[{}].gate'.format(i+1, j))
-        # print(gates[i][j].shape)
-        # print(gates[i][j][0])
+        print(gates[i][j].shape)
+        # print(gates[i][j])
         on, off, rest = count_gate_status(gates[i][j])
         print('on = {}, off = {}, rest = {}'.format(on, off, rest))
-        all = on + off + rest
-        print('on = {:.2%}, off = {:.2%}, rest = {:.2%}'.format(on/all, off/all, rest/all))
+        # print('sort index = {}'.format(sort_idx))
+        # all = on + off + rest
+        # print('on = {:.2%}, off = {:.2%}, rest = {:.2%}'.format(on/all, off/all, rest/all))
         on_list.append(on)
         off_list.append(off)
         rest_list.append(rest)
+
+# %%
+"""
+### 6.2 Plot gate status
+"""
 
 # %%
 import matplotlib.pyplot as plt
@@ -725,9 +736,291 @@ rest_list = torch.Tensor(rest_list)
 
 fig, ax = plt.subplots()
 ax.bar(labels, off_list, color='royalblue', label='Always off gates')
-ax.bar(labels, rest_list, bottom=off_list, color='gold', label='Conditionally of/off gates')
+ax.bar(labels, rest_list, bottom=off_list, color='gold', label='Conditionally on/off gates')
 ax.bar(labels, on_list, bottom=(rest_list+off_list), color='aqua', label='Always on gates')
 plt.xticks(rotation=90)
-plt.xlabel('Without Batch-saping loss')
+plt.xlabel('With Batch-shaping loss')
 plt.ylabel('Number of gated filters')
 plt.legend()
+
+
+# %%
+"""
+### 6.3 Calculate average FLOPs
+"""
+
+# %%
+def count_gate_open_rate(gate: torch.Tensor):
+    # gate.shape[0]: batch size
+    # gate.shape[1]: gate numbers (channel numbers)
+    batch_size = gate.shape[0]
+    gate_num = gate.shape[1]
+    print('batch_size = {}, gate_num = {}'.format(batch_size, gate_num))
+
+    count = torch.zeros(gate_num).to(device)
+    for i in range(batch_size):
+        count = count + gate[i]
+
+        # if i < 2:
+        #     print(gate[i])
+
+    print(count)
+    open_gates = 0
+
+    for i in range(gate_num):
+        open_gates = open_gates + count[i]
+
+    print(open_gates.item())
+    avg_open_gates = open_gates / batch_size
+
+    return avg_open_gates
+
+# %%
+for i in range(3):
+    for j in range(3):
+        print('block{}[{}].gate'.format(i+1, j))
+        print(gates[i][j].shape)
+        # print(gates[i][j])
+        print(count_gate_open_rate(gates[i][j]).item())
+
+
+# %%
+"""
+## Step 7: Read Gate Usage for specific classes
+"""
+
+# %%
+# Test on specific pattern
+
+lbl_dict = {'deer': 1, 
+            'horse': 2,
+            'frog': 3,
+            'truck': 4,
+            'airplane': 5,
+            'cat': 6,
+            'dog': 7,
+            'ship': 8,
+            'bird': 9,
+            'automobile': 10}
+
+# print(classes[0].shape)
+# print(len(classes))
+
+# print(lbl_dict['truck'])
+# print(torch.cat(classes).shape)
+
+# %%
+"""
+### 7.1 Sort gates based on open frequency
+
+The frequency here refers to the number of times a gate is open for the entire
+validation set.
+"""
+
+# %%
+# Sort the gate based on execution frequency over the entire validation set
+
+def sort_gate_freq_idx(gate: torch.Tensor):
+    # gate.shape[0]: batch size
+    # gate.shape[1]: gate numbers (channel numbers)
+    batch_size = gate.shape[0]
+    gate_num = gate.shape[1]
+    # print('batch_size = {}, gate_num = {}'.format(batch_size, gate_num))
+
+    count = torch.zeros(gate_num).to(device)
+    for i in range(batch_size):
+        count = count + gate[i]
+
+    # print(count)
+
+    return np.argsort(count.detach().cpu().numpy()).tolist()
+
+# %%
+"""
+### 7.2 Plot gate open frequency for a specific class
+
+For different classes, the gate open patterns should also be different.
+"""
+
+# %%
+def get_gate_status_freq(gate: torch.Tensor, targets, cls=0):
+    # gate.shape[0]: batch size
+    # gate.shape[1]: gate numbers (channel numbers)
+    batch_size = gate.shape[0]
+    gate_num = gate.shape[1]
+    # print('batch_size = {}, gate_num = {}'.format(batch_size, gate_num))
+
+    count = torch.zeros(gate_num).to(device)
+    appear_times = 0
+    for i in range(batch_size):
+        if targets[i] == cls:
+            count = count + gate[i]
+            appear_times = appear_times + 1
+
+    freq = [None] * gate_num
+
+    for i in range(gate_num):
+        freq[i] = count[i].item() / appear_times
+
+    return freq
+
+# %%
+CLS = lbl_dict['airplane']
+
+sorted_list = []
+
+for i in range(3):
+    for j in range(3):
+        # print('block{}[{}].gate'.format(i+1, j))
+        freq = get_gate_status_freq(gates[i][j], torch.cat(classes), cls=CLS)
+        # print(freq)
+        sort_idx = sort_gate_freq_idx(gates[i][j])
+        # print('sort index = {}'.format(sort_idx))
+        sorted_freq = [[freq[i]] for i in sort_idx]
+        sorted_freq.reverse()
+        sorted_list.append(sorted_freq)
+
+# %%
+import seaborn as sns
+
+ax = [None] * 9
+
+fig, ax = plt.subplots(ncols=len(ax))
+fig.subplots_adjust(wspace=0)
+for i in range(len(ax)):
+    sns.heatmap(sorted_list[i], cmap='viridis', ax=ax[i], cbar=False, xticklabels=False, yticklabels=False, vmin=0, vmax=1)
+fig.colorbar(ax[8].collections[0], ax=ax[8], location='right', use_gridspec=False, pad=0.2)
+
+plt.show()
+
+
+# %%
+"""
+### 7.3 Plot the gate open frequency for each classes
+"""
+
+# %%
+# Generate heatmap data
+
+plot_2d_list = []
+
+for k in range(len(lbl_dict)):
+# for i in range(1):
+
+    sorted_list = []
+
+    for i in range(3):
+        for j in range(3):
+            # print('block{}[{}].gate'.format(i+1, j))
+            freq = get_gate_status_freq(gates[i][j], torch.cat(classes), cls=k)
+            # print(freq)
+            sort_idx = sort_gate_freq_idx(gates[i][j])
+            # print('sort index = {}'.format(sort_idx))
+            sorted_freq = [[freq[x]] for x in sort_idx]
+            # print(sorted_freq)
+            sorted_freq.reverse()
+            sorted_list.append(sorted_freq)
+
+    plot_2d_list.append(sorted_list)
+
+
+# %%
+# Plot heatmaps
+
+for i in range(len(lbl_dict)):
+# for i in range(1):
+
+    ax = [None] * 9
+
+    fig, ax = plt.subplots(ncols=len(ax))
+    fig.subplots_adjust(wspace=0)
+    for j in range(len(ax)):
+        sns.heatmap(plot_2d_list[i][j], cmap='viridis', ax=ax[j], cbar=False, xticklabels=False, yticklabels=False, vmin=0, vmax=0.2)
+    fig.colorbar(ax[8].collections[0], ax=ax[8], location='right', use_gridspec=False, pad=0.2)
+
+    plt.title(list(lbl_dict.keys())[list(lbl_dict.values()).index(i+1)])
+
+    plt.show()
+
+# %%
+"""
+### 7.4 Plot the heatmap of difference between classes
+"""
+
+# %%
+# print(len(plot_2d_list))
+# print(len(plot_2d_list[0]))
+# print(len(plot_2d_list[0][0]))
+# print(len(plot_2d_list[0][0][0]))
+
+# %%
+"""
+For similar classses, the gate pattern should also be similar.
+"""
+
+# %%
+cls_1 = 'deer'
+cls_2 = 'horse'
+
+org_1 = plot_2d_list[lbl_dict[cls_1]]
+org_2 = plot_2d_list[lbl_dict[cls_2]]
+diff = []
+
+for i in range(len(org_1)):
+    diff_l1 = []
+    for j in range(len(org_1[i])):
+        diff_l2 = []
+        for k in range(len(org_1[i][j])):
+            # print(abs(org_1[i][j][k] - org_2[i][j][k]))
+            # diff[i][j][k] = abs(org_1[i][j][k] - org_2[i][j][k])
+            diff_l2.append(abs(org_1[i][j][k] - org_2[i][j][k]))
+        diff_l1.append(diff_l2)
+    diff.append(diff_l1)
+
+ax = [None] * 9
+
+fig, ax = plt.subplots(ncols=len(ax))
+fig.subplots_adjust(wspace=0)
+for m in range(len(ax)):
+    sns.heatmap(diff[m], cmap='viridis', ax=ax[m], cbar=False, xticklabels=False, yticklabels=False, vmin=0, vmax=0.2)
+fig.colorbar(ax[8].collections[0], ax=ax[8], location='right', use_gridspec=False, pad=0.2)
+
+plt.title(cls_1 + ' vs. ' + cls_2)
+
+plt.show()
+
+# %%
+"""
+For not that similar classses, the gate pattern should be less similar.
+"""
+
+# %%
+cls_1 = 'airplane'
+cls_2 = 'cat'
+
+org_1 = plot_2d_list[lbl_dict[cls_1]]
+org_2 = plot_2d_list[lbl_dict[cls_2]]
+diff = []
+
+for i in range(len(org_1)):
+    diff_l1 = []
+    for j in range(len(org_1[i])):
+        diff_l2 = []
+        for k in range(len(org_1[i][j])):
+            # print(abs(org_1[i][j][k] - org_2[i][j][k]))
+            # diff[i][j][k] = abs(org_1[i][j][k] - org_2[i][j][k])
+            diff_l2.append(abs(org_1[i][j][k] - org_2[i][j][k]))
+        diff_l1.append(diff_l2)
+    diff.append(diff_l1)
+
+ax = [None] * 9
+
+fig, ax = plt.subplots(ncols=len(ax))
+fig.subplots_adjust(wspace=0)
+for m in range(len(ax)):
+    sns.heatmap(diff[m], cmap='viridis', ax=ax[m], cbar=False, xticklabels=False, yticklabels=False, vmin=0, vmax=0.2)
+fig.colorbar(ax[8].collections[0], ax=ax[8], location='right', use_gridspec=False, pad=0.2)
+
+plt.title(cls_1 + ' vs. ' + cls_2)
+
+plt.show()
