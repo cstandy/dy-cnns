@@ -523,7 +523,7 @@ for i in range(0, EPOCHS):
         state = {'state_dict': net.state_dict(),
                  'epoch': i,
                  'lr': current_learning_rate}
-        torch.save(state, os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_org.pth'))
+        torch.save(state, os.path.join(CHECKPOINT_PATH, 'ResNets_cg_bs.pth'))
         
     print('')
 
@@ -562,8 +562,7 @@ CHECKPOINT_PATH = "./saved_model"
 
 net = ResNets()
 net = net.to(device)
-checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm_bs_py_org.pth'))
-# checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_gbsm.pth'))
+checkpoint = torch.load(os.path.join(CHECKPOINT_PATH, 'ResNets_cg_bs.pth'))
 net.load_state_dict(checkpoint['state_dict'])
 
 # %%
